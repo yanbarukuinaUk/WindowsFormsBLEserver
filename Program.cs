@@ -9,22 +9,16 @@ using System.Windows.Forms;
 using Windows.Devices.Bluetooth.GenericAttributeProfile;
 using Windows.Devices.Bluetooth;
 using System.IO;
+using System.Threading;
 
 namespace WindowsFormsBLEserver
 {
-    internal static class Program
+
+    class Program
     {
-        /// <summary>
-        /// アプリケーションのメイン エントリ ポイントです。
-        /// </summary>
-        [STAThread]
-        static void Main()
+        static byte cnt = 0;
+        static void Main(string[] args)
         {
-            /*😀😀😀😀vghj😀vghjghfghfgygyhghgjhghjghj
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new Form1());
-            */
             Console.WriteLine("IMEをオンにします...");
             SetIME(true);  // IMEをオンにする
 
@@ -33,8 +27,12 @@ namespace WindowsFormsBLEserver
 
             SendKeys.SendWait("😀vghjghfghfgygyhghgjhghjghj");  // 絵文字を入力
             Console.WriteLine("入力完了！");
+
+            //Async-awaitを使えるようにTask内で実行する
+            Task.Run(AsyncMain).Wait();
         }
 
+        //IMEをオン/オフする
         [DllImport("user32.dll")]
         static extern IntPtr GetForegroundWindow();
 
@@ -51,18 +49,6 @@ namespace WindowsFormsBLEserver
             ImmSetOpenStatus(hIMC, enable);
         }
 
-
-    }
-
-    /*
-    class Program
-    {
-        static byte cnt = 0;
-        static void Main(string[] args)
-        {
-            //Async-awaitを使えるようにTask内で実行する
-            Task.Run(AsyncMain).Wait();
-        }
 
         static async Task AsyncMain()
         {
@@ -127,6 +113,7 @@ namespace WindowsFormsBLEserver
                     cnt = (byte)d;
                     Console.Write(d.ToString("X"));
                     Console.Write(",");
+                    SendKeys.SendWait(d.ToString("X"));
                 }
                 Console.WriteLine();
 
@@ -180,6 +167,6 @@ namespace WindowsFormsBLEserver
         }
 
     }
-    */
+    
 }
 
