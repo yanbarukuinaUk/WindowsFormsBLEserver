@@ -9,7 +9,7 @@ using System.Windows.Forms;
 using Windows.Devices.Bluetooth.GenericAttributeProfile;
 using Windows.Devices.Bluetooth;
 using System.IO;
-using System.Threading;
+
 
 namespace WindowsFormsBLEserver
 {
@@ -80,51 +80,83 @@ namespace WindowsFormsBLEserver
             //定義した情報をもとに、指定のUUIDでサービスに登録する
             var cReadWrite = await gattServiceProvider.Service.CreateCharacteristicAsync(new Guid("00000000-0000-4000-A000-000000000001"), cReadWriteParam);
 
-            //読み込みが発生したときのコールバック定義
+            //読み込みが発生したときのコールバック定義 UTF-8 送信側(返信)
             cReadWrite.Characteristic.ReadRequested += async (GattLocalCharacteristic sender, GattReadRequestedEventArgs args) =>
             {
-                //接続中のデバイスから読み込まれた
-                Console.WriteLine("Read request from " + args.Session.DeviceId.Id);
-                var deferral = args.GetDeferral(); //非同期処理完了を知らせるためのDeferral (awaitを使うため)
+                var deferral = args.GetDeferral();
+                var request = await args.GetRequestAsync();
 
-                var request = await args.GetRequestAsync(); //リクエストを取得
+                string message = "こんにちは"; // 送信するデータ
+                byte[] utf8Data = System.Text.Encoding.UTF8.GetBytes(message);
+                request.RespondWithValue(utf8Data.AsBuffer());
 
-                byte[] buf = new byte[1] { cnt };  //返却値を準備(Streamでもいいが、単純のためにbyte[]を使用)
-                request.RespondWithValue(buf.AsBuffer()); //返却
-
-                deferral.Complete(); //非同期完了を通知
+                deferral.Complete();
             };
 
-            //書き込みが発生したときのコールバック定義
+            ////読み込みが発生したときのコールバック定義
+            //cReadWrite.Characteristic.ReadRequested += async (GattLocalCharacteristic sender, GattReadRequestedEventArgs args) =>
+            //{
+            //    //接続中のデバイスから読み込まれた
+            //    Console.WriteLine("Read request from " + args.Session.DeviceId.Id);
+            //    var deferral = args.GetDeferral(); //非同期処理完了を知らせるためのDeferral (awaitを使うため)
+
+            //    var request = await args.GetRequestAsync(); //リクエストを取得
+
+            //    byte[] buf = new byte[1] { cnt };  //返却値を準備(Streamでもいいが、単純のためにbyte[]を使用)
+            //    request.RespondWithValue(buf.AsBuffer()); //返却
+
+            //    deferral.Complete(); //非同期完了を通知
+            //};
+
+
+            //書き込みが発生したときのコールバック定義 UTF-8
             cReadWrite.Characteristic.WriteRequested += async (GattLocalCharacteristic sender, GattWriteRequestedEventArgs args) =>
             {
-                //接続中のデバイスから書き込まれた
-                Console.WriteLine("Write request from " + args.Session.DeviceId.Id);
-                var deferral = args.GetDeferral(); //非同期処理完了を知らせるためのDeferral (awaitを使うため)
+                var deferral = args.GetDeferral();
+                var request = await args.GetRequestAsync();
+                var buffer = request.Value.ToArray();
+                string receivedText = System.Text.Encoding.UTF8.GetString(buffer);
 
-                var request = await args.GetRequestAsync(); //リクエストを取得
-
-                var stream = request.Value.AsStream(); //streamを取得
-
-                //1byteずつ読み込んで表示
-                int d = 0;
-                while ((d = stream.ReadByte()) != -1)
-                {
-                    cnt = (byte)d;
-                    Console.Write(d.ToString("X"));
-                    Console.Write(",");
-                    SendKeys.SendWait(d.ToString("X"));
-                }
-                Console.WriteLine();
+                Console.WriteLine("受信: " + receivedText);
+                SendKeys.SendWait(receivedText); // IME入力
 
                 if (request.Option == GattWriteOption.WriteWithResponse)
                 {
-                    request.Respond(); //送信側が応答欲しい場合は応答を返す(これをしないと送信側がエラーになる)
-                    //System.Exception: 要求された属性要求で思いもよらないエラーが発生したため、要求されたとおりに完了することができませんでした。 (HRESULT からの例外:0x8065000E) の原因になる
+                    request.Respond();
                 }
-
-                deferral.Complete(); //非同期完了を通知
+                deferral.Complete();
             };
+
+            ////書き込みが発生したときのコールバック定義
+            //cReadWrite.Characteristic.WriteRequested += async (GattLocalCharacteristic sender, GattWriteRequestedEventArgs args) =>
+            //{
+            //    //接続中のデバイスから書き込まれた
+            //    Console.WriteLine("Write request from " + args.Session.DeviceId.Id);
+            //    var deferral = args.GetDeferral(); //非同期処理完了を知らせるためのDeferral (awaitを使うため)
+
+            //    var request = await args.GetRequestAsync(); //リクエストを取得
+
+            //    var stream = request.Value.AsStream(); //streamを取得
+
+            //    //1byteずつ読み込んで表示
+            //    int d = 0;
+            //    while ((d = stream.ReadByte()) != -1)
+            //    {
+            //        cnt = (byte)d;
+            //        Console.Write(d.ToString("X"));
+            //        Console.Write(",");
+            //        SendKeys.SendWait(d.ToString("X"));
+            //    }
+            //    Console.WriteLine();
+
+            //    if (request.Option == GattWriteOption.WriteWithResponse)
+            //    {
+            //        request.Respond(); //送信側が応答欲しい場合は応答を返す(これをしないと送信側がエラーになる)
+            //        //System.Exception: 要求された属性要求で思いもよらないエラーが発生したため、要求されたとおりに完了することができませんでした。 (HRESULT からの例外:0x8065000E) の原因になる
+            //    }
+
+            //    deferral.Complete(); //非同期完了を通知
+            //};
 
             //購読者の増減が発生したときのコールバック定義
             cReadWrite.Characteristic.SubscribedClientsChanged += async (GattLocalCharacteristic sender, object args) =>
@@ -148,16 +180,29 @@ namespace WindowsFormsBLEserver
             //アドバタイジング開始
             gattServiceProvider.StartAdvertising(gattServiceProviderAdvertisingParameters);
 
-            Console.WriteLine("StartAdvertising...");
+            Console.WriteLine("StartAdve😀vghjghfghfgygyhghgjhghjghj4141414141414141rtising...");
 
             //1秒おきにカウントアップ値をNotifyする
 
+            //while (true)
+            //{
+
+            //    byte[] bufN = new byte[1] { cnt };
+            //    await cReadWrite.Characteristic.NotifyValueAsync(bufN.AsBuffer());
+            //    Console.WriteLine("Notify " + cnt.ToString("X"));
+
+            //    await Task.Delay(1000);
+
+            //    cnt++;
+            //}
+
             while (true)
             {
+                string message = "通知:😀 " + cnt.ToString(); // UTF-8で送信するメッセージ   とりあえずUTF-8で😀と番号だけ送った．パソコンからも文字を設定できるようにするため．
+                byte[] utf8Data = System.Text.Encoding.UTF8.GetBytes(message); // UTF-8エンコード
 
-                byte[] bufN = new byte[1] { cnt };
-                await cReadWrite.Characteristic.NotifyValueAsync(bufN.AsBuffer());
-                Console.WriteLine("Notify " + cnt.ToString("X"));
+                await cReadWrite.Characteristic.NotifyValueAsync(utf8Data.AsBuffer()); // UTF-8バイト列を送信
+                Console.WriteLine("Notify: " + message);
 
                 await Task.Delay(1000);
 
