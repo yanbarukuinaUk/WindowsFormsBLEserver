@@ -82,6 +82,7 @@
     <PackageReference Include="Microsoft.Windows.SDK.Contracts">
       <Version>10.0.26100.1742</Version>
     </PackageReference>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

@@ -8,12 +8,16 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using Windows.Devices.Bluetooth;
 using Windows.Devices.Bluetooth.GenericAttributeProfile;
+using System.IO;
+using Newtonsoft.Json;
 
 namespace WindowsFormsBLEserver
 {
     class Program
     {
         static byte cnt = 0;
+        static readonly string ConfigFilePath = "config.json";
+
 
         [STAThread]
         static void Main(string[] args)
@@ -23,9 +27,28 @@ namespace WindowsFormsBLEserver
 
             Console.WriteLine("\\left(x+a\\right)^n=\\sum{k=0}^{n}{\\binom{n}{k}x^ka^{n-k}}");
 
+            Guid appUUID = LoadOrCreateUUID();
+            Console.WriteLine("アプリUUID: " + appUUID);
+
             // Async-awaitを使えるようにTask内で実行
             Task.Run(AsyncMain).Wait();
         }
+
+        static Guid LoadOrCreateUUID()
+        {
+            if (File.Exists(ConfigFilePath))
+            {
+                string json = File.ReadAllText(ConfigFilePath);
+                return JsonConvert.DeserializeObject<Guid>(json);
+            }
+            else
+            {
+                Guid newUuid = Guid.NewGuid();
+                File.WriteAllText(ConfigFilePath, JsonConvert.SerializeObject(newUuid));
+                return newUuid;
+            }
+        }
+
 
         static async Task AsyncMain()
         {
