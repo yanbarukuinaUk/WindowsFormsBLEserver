@@ -8,23 +8,56 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using IWshRuntimeLibrary;
 using Newtonsoft.Json;
 using QRCoder;
 using Windows.Devices.Bluetooth;
 using Windows.Devices.Bluetooth.GenericAttributeProfile;
+using System.Diagnostics;  // 🔹 追加！
+
 
 namespace WindowsFormsBLEserver
 {
     class Program
     {
+
         static byte cnt = 0;
         static readonly string ConfigFilePath = "config.json";
+
 
         [STAThread]
         static void Main(string[] args)
         {
-            //// 3秒待機
-            //Thread.Sleep(3000);
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+
+            if (!System.IO.File.Exists(ConfigFilePath))
+            {
+                SettingsForm settingsForm = new SettingsForm();
+                if (settingsForm.ShowDialog() == DialogResult.OK)
+                {
+                    if (settingsForm.StartupChecked)
+                    {
+                        CreateStartupShortcut();
+                    }
+
+                    if (settingsForm.DesktopShortcutChecked)
+                    {
+                        CreateDesktopShortcut();
+                    }
+
+                    if (settingsForm.PinToTaskbarChecked)
+                    {
+                        PinToTaskbar();
+                    }
+
+                    // 初回起動済みフラグを設定
+                  //  SetFirstRunCompleted();
+                }
+            }
+            
+
+
 
             //Console.WriteLine("\\left(x+a\\right)^n=\\sum{k=0}^{n}{\\binom{n}{k}x^ka^{n-k}}");
             var (uuid1, uuid2) = LoadOrCreateUUID();
@@ -36,17 +69,79 @@ namespace WindowsFormsBLEserver
             Task.Run(AsyncMain);
 
             // フォームを表示（QRコードを含む）
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
+
             Application.Run(new QRCodeForm(uuid1,uuid2));
         }
+        //static bool IsFirstRun()
+        //{
+        //    return !System.IO.File.Exists(ConfigFilePath);
+        //}
+
+        //static void SetFirstRunCompleted()
+        //{
+        //    Directory.CreateDirectory(Path.GetDirectoryName(ConfigFilePath));
+        //    System.IO.File.WriteAllText(ConfigFilePath, "initialized");
+        //}
+
+
+
+        /// <summary>
+        /// デスクトップにショートカットを作成
+        /// </summary>
+        static void CreateDesktopShortcut()
+        {
+            string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+            string shortcutPath = Path.Combine(desktopPath, "WindowsFormsBLEserver.lnk");
+            string exePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
+
+            if (!System.IO.File.Exists(shortcutPath))
+            {
+                WshShell shell = new WshShell();
+                IWshShortcut shortcut = (IWshShortcut)shell.CreateShortcut(shortcutPath);
+                shortcut.TargetPath = exePath;
+                shortcut.WorkingDirectory = Path.GetDirectoryName(exePath);
+                shortcut.Save();
+            }
+
+        }
+        static void CreateStartupShortcut()
+        {
+            string startupPath = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
+            string shortcutPath = Path.Combine(startupPath, "WindowsFormsBLEserver.lnk");
+            string exePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
+
+            // ★ 修正: System.IO.File.Exists に変更
+            if (!System.IO.File.Exists(shortcutPath))
+            {
+                WshShell shell = new WshShell();
+                IWshShortcut shortcut = (IWshShortcut)shell.CreateShortcut(shortcutPath);
+                shortcut.TargetPath = exePath;
+                shortcut.WorkingDirectory = Path.GetDirectoryName(exePath);
+                shortcut.Save();
+            }
+        }
+        static void PinToTaskbar()
+        {
+            string exePath = Application.ExecutablePath;
+
+            ProcessStartInfo psi = new ProcessStartInfo
+            {
+                FileName = "cmd.exe",
+                Arguments = $"/c explorer /select,\"{exePath}\" & timeout /t 1 & echo ピン留めは手動で行ってください",
+                WindowStyle = ProcessWindowStyle.Hidden,
+                CreateNoWindow = true
+            };
+
+            Process.Start(psi);
+        }
+
 
         static (Guid, Guid) LoadOrCreateUUID()
         {
-            if (File.Exists(ConfigFilePath))
+            if (System.IO.File.Exists(ConfigFilePath))
             {
                 // ファイルからUUIDのペアを読み込む
-                string json = File.ReadAllText(ConfigFilePath);
+                string json = System.IO.File.ReadAllText(ConfigFilePath);
                 Guid[] guids = JsonConvert.DeserializeObject<Guid[]>(json);
 
                 if (guids.Length == 2)
@@ -65,7 +160,7 @@ namespace WindowsFormsBLEserver
                 Guid newUuid2 = Guid.NewGuid();
 
                 // 生成したUUIDペアを保存
-                File.WriteAllText(ConfigFilePath, JsonConvert.SerializeObject(new Guid[] { newUuid1, newUuid2 }));
+                System.IO.File.WriteAllText(ConfigFilePath, JsonConvert.SerializeObject(new Guid[] { newUuid1, newUuid2 }));
 
                 // 新しいUUIDペアを返す
                 return (newUuid1, newUuid2);
@@ -174,14 +269,14 @@ namespace WindowsFormsBLEserver
                 {
                     //ペースト^V以外のコマンドは条件分岐の必要あり　もしくはSwift側から文字列内部に入れるか
 
-                    SendKeys.SendWait("%n");
-                   // Thread.Sleep(10);
-                    SendKeys.SendWait("e");
-                   // Thread.Sleep(10);
-                    SendKeys.SendWait("i");
-                   // Thread.Sleep(10);
+                   // SendKeys.SendWait("%n");
+                   //// Thread.Sleep(10);
+                   // SendKeys.SendWait("e");
+                   //// Thread.Sleep(10);
+                   // SendKeys.SendWait("i");
+                   //// Thread.Sleep(10);
                     SendKeys.SendWait("^v");
-                    SendKeys.SendWait("{ENTER}");
+                   // SendKeys.SendWait("{ENTER}");
                     Console.WriteLine("ペースト実行");
                 }
                 catch (Exception ex)
@@ -264,19 +359,22 @@ namespace WindowsFormsBLEserver
         private Guid UUID2;
         private string combinedUUID;
 
+        private Button openUrlButton;
+
+
         public QRCodeForm(Guid uuid1, Guid uuid2)
         {
             this.UUID1 = uuid1;
             this.UUID2 = uuid2;
             this.combinedUUID = uuid1.ToString() + "/" + uuid2.ToString();  // UUIDを結合
 
-            this.Text = "UUID QRコード表示";
+            this.Text = "スマホアプリとBluetooth接続";
             this.Width = 400;
             this.Height = 450;
 
             label = new Label
             {
-                Text = "UUID: " + combinedUUID.ToString(),
+                Text = "QRコード" + combinedUUID.ToString(),
                 Dock = DockStyle.Top,
                 TextAlign = ContentAlignment.MiddleCenter
             };
@@ -287,8 +385,20 @@ namespace WindowsFormsBLEserver
                 Dock = DockStyle.Fill
             };
 
+
+            openUrlButton = new Button
+            {
+                Text = "ヘルプ?　URLを開く",
+                Dock = DockStyle.Bottom,
+                Height = 40
+            };
+            openUrlButton.Click += OpenUrlButton_Click;
+
+
+
             this.Controls.Add(pictureBox);
             this.Controls.Add(label);
+            this.Controls.Add(openUrlButton);
             DisplayQRCode();
         }
 
@@ -305,5 +415,107 @@ namespace WindowsFormsBLEserver
                 }
             }
         }
+
+        private void OpenUrlButton_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "https://www.notion.so/Develop-Blog-1a0c3ce36c1d807cb177e81e3aff8d14", // URLを開く
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("URLを開く際にエラーが発生しました。\n" + ex.Message, "エラー", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
     }
+
+    public class SettingsForm : Form
+    {
+        public bool StartupChecked { get; private set; }
+        public bool DesktopShortcutChecked { get; private set; }
+        public bool PinToTaskbarChecked { get; private set; }
+
+        private CheckBox startupCheckBox;
+        private CheckBox desktopCheckBox;
+        private CheckBox taskbarCheckBox;
+        private Button okButton;
+
+        public SettingsForm()
+        {
+            Text = "初回設定";
+            Width = 400;
+            Height = 250;
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            StartPosition = FormStartPosition.CenterScreen;
+
+            Label label = new Label()
+            {
+                Text = "アプリの設定を選択してください。",
+                Left = 20,
+                Top = 20,
+                AutoSize = true
+            };
+
+            startupCheckBox = new CheckBox()
+            {
+                Text = "スタートアップに登録",
+                Left = 20,
+                Top = 60,
+                Width = 300,
+                Checked = true  // 🔹 初期値をチェック済みにする
+
+            };
+
+            desktopCheckBox = new CheckBox()
+            {
+                Text = "デスクトップにショートカットを作成",
+                Left = 20,
+                Top = 90,
+                Width = 300,
+                Checked = true  // 🔹 初期値をチェック済みにする
+
+            };
+
+            taskbarCheckBox = new CheckBox()
+            {
+                Text = "タスクバーにピン留め",
+                Left = 20,
+                Top = 120,
+                Width = 300,
+                Checked = true  // 🔹 初期値をチェック済みにする
+
+            };
+
+            okButton = new Button()
+            {
+                Text = "OK",
+                Left = 150,
+                Top = 160,
+                Width = 100
+            };
+
+            okButton.Click += OkButton_Click;
+
+            Controls.Add(label);
+            Controls.Add(startupCheckBox);
+            Controls.Add(desktopCheckBox);
+            Controls.Add(taskbarCheckBox);
+            Controls.Add(okButton);
+        }
+
+        private void OkButton_Click(object sender, EventArgs e)
+        {
+            StartupChecked = startupCheckBox.Checked;
+            DesktopShortcutChecked = desktopCheckBox.Checked;
+            PinToTaskbarChecked = taskbarCheckBox.Checked;
+
+            DialogResult = DialogResult.OK;
+            Close();
+        }
+    }
+
 }
