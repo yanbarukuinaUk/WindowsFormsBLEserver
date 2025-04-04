@@ -46,10 +46,12 @@ namespace WindowsFormsBLEserver
                         CreateDesktopShortcut();
                     }
 
+                    /*
                     if (settingsForm.PinToTaskbarChecked)
                     {
                         PinToTaskbar();
                     }
+                    */
 
                     // 初回起動済みフラグを設定
                   //  SetFirstRunCompleted();
@@ -88,11 +90,16 @@ namespace WindowsFormsBLEserver
         /// <summary>
         /// デスクトップにショートカットを作成
         /// </summary>
+        /// 
         static void CreateDesktopShortcut()
         {
             string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-            string shortcutPath = Path.Combine(desktopPath, "WindowsFormsBLEserver.lnk");
+            string shortcutName = "スマホとBluetooth接続"; // ← 表示名（拡張子は自動で.lnk）
+            string shortcutPath = Path.Combine(desktopPath, shortcutName + ".lnk");
             string exePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
+            string iconPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "PCBLEicon.ico");
+
+
 
             if (!System.IO.File.Exists(shortcutPath))
             {
@@ -100,10 +107,16 @@ namespace WindowsFormsBLEserver
                 IWshShortcut shortcut = (IWshShortcut)shell.CreateShortcut(shortcutPath);
                 shortcut.TargetPath = exePath;
                 shortcut.WorkingDirectory = Path.GetDirectoryName(exePath);
-                shortcut.Save();
-            }
+                shortcut.Description = "Bluetooth接続 QRコードを表示するアプリ";
 
+                shortcut.IconLocation = iconPath;
+                shortcut.Save();
+
+            }
         }
+
+
+
         static void CreateStartupShortcut()
         {
             string startupPath = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
@@ -119,20 +132,6 @@ namespace WindowsFormsBLEserver
                 shortcut.WorkingDirectory = Path.GetDirectoryName(exePath);
                 shortcut.Save();
             }
-        }
-        static void PinToTaskbar()
-        {
-            string exePath = Application.ExecutablePath;
-
-            ProcessStartInfo psi = new ProcessStartInfo
-            {
-                FileName = "cmd.exe",
-                Arguments = $"/c explorer /select,\"{exePath}\" & timeout /t 1 & echo ピン留めは手動で行ってください",
-                WindowStyle = ProcessWindowStyle.Hidden,
-                CreateNoWindow = true
-            };
-
-            Process.Start(psi);
         }
 
 
@@ -260,7 +259,7 @@ namespace WindowsFormsBLEserver
             staThread.Start();
             staThread.Join();
         }
-
+        
         static void PasteClipboardText()
         {
             Thread staThread = new Thread(() =>
@@ -416,6 +415,7 @@ namespace WindowsFormsBLEserver
             }
         }
 
+        //notionのデベロッパーページを開く   ＱＲコードのすぐ下に表示
         private void OpenUrlButton_Click(object sender, EventArgs e)
         {
             try
@@ -437,7 +437,7 @@ namespace WindowsFormsBLEserver
     {
         public bool StartupChecked { get; private set; }
         public bool DesktopShortcutChecked { get; private set; }
-        public bool PinToTaskbarChecked { get; private set; }
+
 
         private CheckBox startupCheckBox;
         private CheckBox desktopCheckBox;
@@ -480,15 +480,6 @@ namespace WindowsFormsBLEserver
 
             };
 
-            taskbarCheckBox = new CheckBox()
-            {
-                Text = "タスクバーにピン留め",
-                Left = 20,
-                Top = 120,
-                Width = 300,
-                Checked = true  // 🔹 初期値をチェック済みにする
-
-            };
 
             okButton = new Button()
             {
@@ -511,7 +502,6 @@ namespace WindowsFormsBLEserver
         {
             StartupChecked = startupCheckBox.Checked;
             DesktopShortcutChecked = desktopCheckBox.Checked;
-            PinToTaskbarChecked = taskbarCheckBox.Checked;
 
             DialogResult = DialogResult.OK;
             Close();
