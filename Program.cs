@@ -197,6 +197,16 @@ namespace WindowsFormsBLEserver
             {
                 var deferral = args.GetDeferral();
                 var request = await args.GetRequestAsync();
+                if (request?.Value == null || request.Value.Length == 0)
+                {
+                    Console.WriteLine("受信データが null です");
+                    //if (request?.Option == GattWriteOption.WriteWithResponse)
+                    //{
+                    //    request.RespondWithProtocolError(BluetoothError.InvalidArgument);
+                    //}
+                    deferral.Complete();
+                    return;
+                }
                 var buffer = request.Value.ToArray();
                 string receivedText = Encoding.UTF8.GetString(buffer);
 
@@ -264,19 +274,47 @@ namespace WindowsFormsBLEserver
         {
             Thread staThread = new Thread(() =>
             {
+
                 try
                 {
-                    //ペースト^V以外のコマンドは条件分岐の必要あり　もしくはSwift側から文字列内部に入れるか
+                    if (Clipboard.ContainsText())
+                    {
+                        string text = Clipboard.GetText();
 
-                   // SendKeys.SendWait("%n");
-                   //// Thread.Sleep(10);
-                   // SendKeys.SendWait("e");
-                   //// Thread.Sleep(10);
-                   // SendKeys.SendWait("i");
-                   //// Thread.Sleep(10);
-                    SendKeys.SendWait("^v");
-                   // SendKeys.SendWait("{ENTER}");
-                    Console.WriteLine("ペースト実行");
+                        // 先頭が◇なら、それを除く
+                        if (!string.IsNullOrEmpty(text) && text[0] == '◇')
+                        {
+                            text = text.Substring(1);
+                            Clipboard.SetText(text); // 修正後の文字列をクリップボードにセット
+                            
+                            Thread.Sleep(1);
+                            SendKeys.SendWait("%n");
+                            Thread.Sleep(1);
+                            SendKeys.SendWait("e");
+                            Thread.Sleep(1);
+                            SendKeys.SendWait("i");
+                            Thread.Sleep(1);
+                        }
+
+                        SendKeys.SendWait("^v");
+                        Console.WriteLine("ペースト実行");
+                    }
+                    else
+                    {
+                        Console.WriteLine("クリップボードにテキストがありません");
+                    }
+
+                   // //ペースト^V以外のコマンドは条件分岐の必要あり　もしくはSwift側から文字列内部に入れるか
+
+                   // // SendKeys.SendWait("%n");
+                   // //// Thread.Sleep(10);
+                   // // SendKeys.SendWait("e");
+                   // //// Thread.Sleep(10);
+                   // // SendKeys.SendWait("i");
+                   // //// Thread.Sleep(10);
+                   // SendKeys.SendWait("^v");
+                   //// SendKeys.SendWait("{ENTER}");
+                   // Console.WriteLine("ペースト実行");
                 }
                 catch (Exception ex)
                 {
@@ -373,7 +411,7 @@ namespace WindowsFormsBLEserver
 
             label = new Label
             {
-                Text = "QRコード" + combinedUUID.ToString(),
+                Text = "QRコード 　スマホアプリでスキャンしてください" /*+ combinedUUID.ToString()*/,
                 Dock = DockStyle.Top,
                 TextAlign = ContentAlignment.MiddleCenter
             };
