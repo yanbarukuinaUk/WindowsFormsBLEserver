@@ -97,7 +97,7 @@ namespace WindowsFormsBLEserver
             string shortcutName = "スマホとBluetooth接続"; // ← 表示名（拡張子は自動で.lnk）
             string shortcutPath = Path.Combine(desktopPath, shortcutName + ".lnk");
             string exePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
-            string iconPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "PCBLEicon.ico");
+            string iconPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "mix.ico");
 
 
 
@@ -244,10 +244,10 @@ namespace WindowsFormsBLEserver
             gattServiceProvider.StartAdvertising(gattServiceProviderAdvertisingParameters);
             Console.WriteLine("StartAdvertising...");
 
-            while (true)
-            {
-                cnt++;
-            }
+            //while (true)
+            //{
+            //    cnt++;
+            //}
         }
 
         static void SetClipboardText(string text)
@@ -409,6 +409,9 @@ namespace WindowsFormsBLEserver
             this.Width = 400;
             this.Height = 450;
 
+            this.Icon = new Icon("mix.ico"); // パスは実行ファイルと同じ場所、またはフルパスで指定
+
+
             label = new Label
             {
                 Text = "QRコード 　スマホアプリでスキャンしてください" /*+ combinedUUID.ToString()*/,
@@ -460,7 +463,7 @@ namespace WindowsFormsBLEserver
             {
                 Process.Start(new ProcessStartInfo
                 {
-                    FileName = "https://www.notion.so/Develop-Blog-1a0c3ce36c1d807cb177e81e3aff8d14", // URLを開く
+                    FileName = "https://yanbarukuinauk.github.io/homepage/projects", // URLを開く
                     UseShellExecute = true
                 });
             }

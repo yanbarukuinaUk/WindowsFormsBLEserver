@@ -18,7 +18,7 @@ namespace WindowsFormsBLEserver
             //this.Icon = Properties.Resources.PCBLEicon;
             string exeDir = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
             string iconPath = System.IO.Path.Combine(exeDir, "mix.ico");
-
+            //this.Icon = new Icon("PCBLEicon.ico"); // 実行時にセット（必要なら）
             if (System.IO.File.Exists(iconPath))
             {
                 this.Icon = new System.Drawing.Icon(iconPath);
